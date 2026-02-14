@@ -1,0 +1,9 @@
+
+{
+  "name": "V-Mitra - Smart AI Business Companion",
+  "description": "V-Mitra ek professional AI companion hai jo Bharat ke local business owners ke bahi-khata ko voice se manage karta hai.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}
