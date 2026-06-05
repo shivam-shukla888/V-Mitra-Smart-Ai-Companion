@@ -41,16 +41,16 @@ The following diagram shows the high‑level architecture of V‑Mitra, illustra
 
 ```mermaid
 flowchart LR
-    subgraph FE[Frontend (React + Vite)]
-        UI[UI (React JSX)] -->|API Calls| AI[Groq AI Services]
-        UI -->|WebSocket| WS[WebSocket (optional)]
+    subgraph FE["Frontend (React + Vite)"]
+        UI["UI (React JSX)"] -->|API Calls| AI["Groq AI Services"]
+        UI -->|WebSocket| WS["WebSocket (optional)"]
     end
-    subgraph AI[Groq Cloud]
-        AI -->|Chat Completion| LLM[LLM (Llama‑3.3‑70b‑versatile)]
-        AI -->|Speech-to-Text| Whisper[Whisper Large v3 Turbo]
+    subgraph AI["Groq Cloud"]
+        AI -->|Chat Completion| LLM["LLM (Llama‑3.3‑70b‑versatile)"]
+        AI -->|Speech-to-Text| Whisper["Whisper Large v3 Turbo"]
     end
-    subgraph BE[Backend (Spring Boot)]
-        BEAPI[REST API] -->|Data Persistence| DB[(Database)]
+    subgraph BE["Backend (Spring Boot)"]
+        BEAPI["REST API"] -->|Data Persistence| DB[(Database)]
     end
     FE -->|Fetch| BEAPI
     BEAPI -->|Responses| UI
