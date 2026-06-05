@@ -35,7 +35,29 @@ Whether it's recording a sale ("Ek kilo cheeni bechi"), checking stock ("Doodh k
 - **Build Tool:** [Maven](https://maven.apache.org/)
 
 ---
+## 🏗️ Architecture Design
 
+The following diagram shows the high‑level architecture of V‑Mitra, illustrating how the frontend, AI services, and optional Java backend interact.
+
+```mermaid
+flowchart LR
+    subgraph FE[Frontend (React + Vite)]
+        UI[UI (React JSX)] -->|API Calls| AI[Groq AI Services]
+        UI -->|WebSocket| WS[WebSocket (optional)]
+    end
+    subgraph AI[Groq Cloud]
+        AI -->|Chat Completion| LLM[LLM (Llama‑3.3‑70b‑versatile)]
+        AI -->|Speech-to-Text| Whisper[Whisper Large v3 Turbo]
+    end
+    subgraph BE[Backend (Spring Boot)]
+        BEAPI[REST API] -->|Data Persistence| DB[(Database)]
+    end
+    FE -->|Fetch| BEAPI
+    BEAPI -->|Responses| UI
+    style FE fill:#E3F2FD,stroke:#90CAF9,stroke-width:2px
+    style AI fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px
+    style BE fill:#E8F5E9,stroke:#66BB6A,stroke-width:2px
+```
 ## 🚀 Getting Started
 
 ### Prerequisites
