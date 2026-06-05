@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Package, AlertCircle, Clock, RefreshCcw, Sparkles, ShoppingCart, History, CheckCircle2, Plus, Calculator, Mic, BarChart as BarChartIcon, AlertTriangle, Key, RefreshCw } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { DASHBOARD_SUMMARY_PROMPT } from '../constants';
 import { Sale, InventoryItem } from '../types';
@@ -27,26 +26,52 @@ const BusinessInsights: React.FC<BusinessInsightsProps> = ({ stats, sales, inven
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
   const retryCountRef = useRef(0);
 
+  const getApiKey = () => {
+    return localStorage.getItem('groq_api_key') || process.env.GROQ_API_KEY || '';
+  };
+
   const fetchAiSummary = async () => {
     setIsSyncing(true);
     setIsQuotaExceeded(false);
     try {
-      // @google/genai initialization fix: strictly use process.env.API_KEY per guidelines
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `${DASHBOARD_SUMMARY_PROMPT}. Stats: Sales ₹${stats.todaySales}, Profit ₹${stats.todayProfit}, Alerts: ${stats.lowStockItems.join(', ')}`,
+      const apiKey = getApiKey();
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'user',
+              content: `${DASHBOARD_SUMMARY_PROMPT}. Stats: Sales ₹${stats.todaySales}, Profit ₹${stats.todayProfit}, Alerts: ${stats.lowStockItems.join(', ')}`
+            }
+          ],
+          temperature: 0.7,
+          max_completion_tokens: 150
+        })
       });
-      setAiSummary(response.text || `Nafa ₹${stats.todayProfit} hai. Hisaab clear hai!`);
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        const status = response.status;
+        const msg = errData?.error?.message || response.statusText || '';
+        throw new Error(`Groq API Error (${status}): ${msg}`);
+      }
+
+      const data = await response.json();
+      const text = data?.choices?.[0]?.message?.content;
+      setAiSummary(text || `Nafa ₹${stats.todayProfit} hai. Hisaab clear hai!`);
       retryCountRef.current = 0;
     } catch (e: any) {
       const errorMsg = e.message || "";
-      // Handle project/API key verification issues by triggering re-selection
-      if (errorMsg.includes("Requested entity was not found.")) {
+      if (errorMsg.includes("401") || errorMsg.includes("Unauthorized") || errorMsg.includes("invalid_api_key")) {
         onQuotaError?.();
         return;
       }
-      if (errorMsg.includes("429") || errorMsg.toLowerCase().includes("quota")) {
+      if (errorMsg.includes("429") || errorMsg.toLowerCase().includes("quota") || errorMsg.toLowerCase().includes("rate limit")) {
         setIsQuotaExceeded(true);
         setAiSummary("AI Busy hai. Unlimited use ke liye apni Pro Key lagayein.");
         if (retryCountRef.current < 2) {

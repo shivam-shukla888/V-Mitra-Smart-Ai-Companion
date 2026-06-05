@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Store, Mic, ShieldCheck, Briefcase, History, Receipt, Zap, CheckCircle2, MapPin, LayoutDashboard, FileText, LogOut, Key, Sparkles, Mail, Server, ShieldAlert, RefreshCw, Award, User, ShoppingCart, TrendingUp, Package, AlertCircle, Clock, Plus, Calculator, BarChart as BarChartIcon, AlertTriangle, Shield
+  Store, Mic, ShieldCheck, Briefcase, History, Receipt, Zap, CheckCircle2, MapPin, LayoutDashboard, FileText, LogOut, Key, Sparkles, Mail, Server, ShieldAlert, RefreshCw, Award, User, ShoppingCart, TrendingUp, Package, AlertCircle, Clock, Plus, Calculator, BarChart as BarChartIcon, AlertTriangle, Shield, X
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import { useDataManager } from './useDataManager';
 import AuthScreen from './components/AuthScreen';
 import VoiceAssistant from './components/VoiceAssistant';
@@ -52,13 +51,30 @@ const App: React.FC = () => {
     showToast("Logout ho gaya.");
   };
 
-  const handleOpenKeySelector = async () => {
-    if (window.aistudio && window.aistudio.openSelectKey) {
-      await window.aistudio.openSelectKey();
-      showToast("Key lag gayi.", "success");
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [groqKeyInput, setGroqKeyInput] = useState('');
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem('groq_api_key') || '';
+    setGroqKeyInput(savedKey);
+  }, [isKeyModalOpen]);
+
+  const handleSaveKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (groqKeyInput.trim()) {
+      localStorage.setItem('groq_api_key', groqKeyInput.trim());
+      showToast("Groq API Key save ho gayi!", "success");
     } else {
-      window.open('https://ai.google.dev/gemini-api/docs/billing', '_blank');
+      localStorage.removeItem('groq_api_key');
+      showToast("Default Key use ho rahi hai.", "info");
     }
+    setIsKeyModalOpen(false);
+    // Refresh page to re-initialize services with new key
+    setTimeout(() => window.location.reload(), 500);
+  };
+
+  const handleOpenKeySelector = () => {
+    setIsKeyModalOpen(true);
   };
 
   if (!currentUser) return <AuthScreen onLogin={handleLogin} />;
@@ -121,6 +137,40 @@ const App: React.FC = () => {
         <div className="fixed top-8 right-8 z-[200] bg-white text-slate-900 px-6 py-4 rounded-2xl shadow-2xl border border-indigo-100 flex items-center gap-3 animate-in slide-in-from-right">
           <CheckCircle2 className="text-emerald-500" size={20} />
           <span className="font-bold">{toast.message}</span>
+        </div>
+      )}
+      {isKeyModalOpen && (
+        <div className="fixed inset-0 z-[250] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
+          <div className="bg-[#0b1329] border border-white/10 w-full max-w-lg rounded-[36px] p-8 shadow-3xl relative overflow-hidden">
+            <button onClick={() => setIsKeyModalOpen(false)} className="absolute top-6 right-6 p-2 bg-white/5 text-slate-400 hover:text-white rounded-full transition-all">
+              <X size={18} />
+            </button>
+            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg">
+              <Key size={22} />
+            </div>
+            <h3 className="text-2xl font-black text-white tracking-tight mb-2">Groq Pro API Key</h3>
+            <p className="text-slate-400 text-sm mb-6">Apni Groq API Key yahan enter karein. Default key automatic load ho jayegi agar blank chhodenge.</p>
+            <form onSubmit={handleSaveKey} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-indigo-400 uppercase tracking-widest">API Key</label>
+                <input 
+                  type="password" 
+                  value={groqKeyInput} 
+                  onChange={(e) => setGroqKeyInput(e.target.value)} 
+                  placeholder="gsk_..." 
+                  className="w-full bg-slate-900/80 border border-white/5 rounded-2xl px-5 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-mono transition-all text-sm"
+                />
+              </div>
+              <div className="flex gap-4">
+                <button type="button" onClick={() => { localStorage.removeItem('groq_api_key'); setGroqKeyInput(''); showToast("Default key restore ho gayi.", "info"); setIsKeyModalOpen(false); setTimeout(() => window.location.reload(), 500); }} className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all">
+                  Reset Default
+                </button>
+                <button type="submit" className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-600/20">
+                  Save Key
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

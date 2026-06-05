@@ -1,8 +1,5 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { GoogleGenAI, LiveServerMessage, Modality, Type, FunctionDeclaration } from '@google/genai';
-import { Mic, MicOff, Volume2, X, Loader2, CheckCircle2, AlertCircle, Key, AlertTriangle } from 'lucide-react';
-import { createBlob, decode, decodeAudioData } from '../audioUtils';
+import { Mic, MicOff, Volume2, X, Loader2, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { getSystemInstruction } from '../constants';
 import { TranscriptionItem, Language, ChatSession } from '../types';
 
@@ -16,49 +13,56 @@ interface VoiceAssistantProps {
   onQuotaError?: () => void;
 }
 
-const recordSaleTool: FunctionDeclaration = {
-  name: 'record_sale',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Record a business sale. Use this when the user mentions selling items.',
-    properties: {
-      items: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            quantity: { type: Type.NUMBER }
-          },
-          required: ['name', 'quantity']
-        }
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "record_sale",
+      description: "Record a business sale. Use this when the user mentions selling items.",
+      parameters: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                quantity: { type: "number" }
+              },
+              required: ["name", "quantity"]
+            }
+          }
+        },
+        required: ["items"]
       }
-    },
-    required: ['items']
-  }
-};
-
-const restockTool: FunctionDeclaration = {
-  name: 'update_inventory_stock',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Update stock levels for restocking or new arrivals.',
-    properties: {
-      items: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            quantity: { type: Type.NUMBER }
-          },
-          required: ['name', 'quantity']
-        }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_inventory_stock",
+      description: "Update stock levels for restocking or new arrivals.",
+      parameters: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                quantity: { type: "number" }
+              },
+              required: ["name", "quantity"]
+            }
+          }
+        },
+        required: ["items"]
       }
-    },
-    required: ['items']
+    }
   }
-};
+];
 
 const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocation, locationCoords, onRecordSale, onRestock, onSaveSession, onQuotaError }) => {
   const [isActive, setIsActive] = useState(false);
@@ -68,18 +72,11 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
   const [transcriptions, setTranscriptions] = useState<TranscriptionItem[]>([]);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
   
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const outAudioContextRef = useRef<AudioContext | null>(null);
-  const nextStartTimeRef = useRef(0);
-  const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
-  const sessionPromiseRef = useRef<Promise<any> | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
-
-  const currentInputTransRef = useRef('');
-  const currentOutputTransRef = useRef('');
-
   const onSaveSessionRef = useRef(onSaveSession);
   const transcriptionsRef = useRef(transcriptions);
 
@@ -91,12 +88,46 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
     transcriptionsRef.current = transcriptions;
   }, [transcriptions]);
 
+  // Clean up speech synthesis on unmount
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const getApiKey = () => {
+    return localStorage.getItem('groq_api_key') || process.env.GROQ_API_KEY || '';
+  };
+
+  const speakText = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voices = window.speechSynthesis.getVoices();
+      // Try to find an Indian English or Hindi voice for more natural Hinglish accent
+      const hiVoice = voices.find(v => v.lang.startsWith('hi') || v.lang.includes('IN') || v.lang.includes('in'));
+      if (hiVoice) {
+        utterance.voice = hiVoice;
+      }
+      utterance.lang = 'hi-IN';
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   const stopSession = useCallback(() => {
-    if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(track => track.stop());
-    if (scriptProcessorRef.current) scriptProcessorRef.current.disconnect();
-    sourcesRef.current.forEach(source => { try { source.stop(); } catch (e) {} });
-    sourcesRef.current.clear();
-    
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsActive(false);
+    setIsConnecting(false);
+
     if (transcriptionsRef.current.length > 0) {
       onSaveSessionRef.current({
         id: 'S' + Date.now(),
@@ -105,157 +136,205 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
         messages: [...transcriptionsRef.current]
       });
     }
-
-    setIsActive(false);
-    setIsConnecting(false);
   }, []);
 
   const startSession = async () => {
     setIsConnecting(true);
     setError(null);
     setIsQuotaExceeded(false);
+    audioChunksRef.current = [];
+
     try {
-      // @google/genai initialization fix: strictly use process.env.API_KEY per guidelines
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const inCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      const outCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      audioContextRef.current = inCtx;
-      outAudioContextRef.current = outCtx;
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
+      streamRef.current = stream;
 
-      const systemInstruction = `${getSystemInstruction(Language.HINGLISH)}\nLocation: ${currentLocation || 'Unknown'}. Use Hindi/Hinglish always.`;
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
 
-      const sessionPromise = ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-        callbacks: {
-          onopen: () => {
-            setIsConnecting(false);
-            setIsActive(true);
-            const source = inCtx.createMediaStreamSource(stream);
-            const scriptProcessor = inCtx.createScriptProcessor(4096, 1, 1);
-            scriptProcessorRef.current = scriptProcessor;
-            scriptProcessor.onaudioprocess = (e) => {
-              const inputData = e.inputBuffer.getChannelData(0);
-              const pcmBlob = createBlob(inputData);
-              // CRITICAL: Solely rely on sessionPromise resolves to send data to prevent race conditions or stale references.
-              sessionPromise.then((session) => session.sendRealtimeInput({ media: pcmBlob }));
-            };
-            source.connect(scriptProcessor);
-            scriptProcessor.connect(inCtx.destination);
-          },
-          onmessage: async (message: LiveServerMessage) => {
-            // Handle model interruption: stop all current audio playback immediately
-            if (message.serverContent?.interrupted) {
-              for (const source of sourcesRef.current.values()) {
-                try { source.stop(); } catch (e) {}
-                sourcesRef.current.delete(source);
-              }
-              nextStartTimeRef.current = 0;
-            }
-
-            if (message.toolCall) {
-              for (const fc of message.toolCall.functionCalls) {
-                if (fc.name === 'record_sale') {
-                  const result = await onRecordSale((fc.args as any).items);
-                  if (result.success) {
-                    setSuccessMsg(`Bill Save ho gaya: ₹${result.amount ?? 0}`);
-                    setTimeout(() => setSuccessMsg(null), 3500);
-                  }
-                } else if (fc.name === 'update_inventory_stock') {
-                  const result = await onRestock((fc.args as any).items);
-                  if (result.success) {
-                    setSuccessMsg("Stock update ho gaya!");
-                    setTimeout(() => setSuccessMsg(null), 3500);
-                  }
-                }
-                sessionPromise.then((session) => {
-                  session.sendToolResponse({
-                    functionResponses: { id: fc.id, name: fc.name, response: { result: "Theek hai" } },
-                  });
-                });
-              }
-            }
-
-            if (message.serverContent?.outputTranscription) {
-              currentOutputTransRef.current += message.serverContent.outputTranscription.text;
-            } else if (message.serverContent?.inputTranscription) {
-              currentInputTransRef.current += message.serverContent.inputTranscription.text;
-            }
-
-            if (message.serverContent?.turnComplete) {
-              const uText = currentInputTransRef.current.trim();
-              const aText = currentOutputTransRef.current.trim();
-              if (uText) setTranscriptions(prev => [...prev, { id: Date.now().toString(), type: 'user', text: uText, timestamp: new Date() }]);
-              if (aText) setTranscriptions(prev => [...prev, { id: (Date.now()+1).toString(), type: 'ai', text: aText, timestamp: new Date() }]);
-              currentInputTransRef.current = '';
-              currentOutputTransRef.current = '';
-              setIsAiThinking(false);
-            }
-
-            const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-            if (base64Audio) {
-              setIsAiThinking(true);
-              const outCtx = outAudioContextRef.current!;
-              // Schedule playback for gapless audio stream
-              nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outCtx.currentTime);
-              const audioBuffer = await decodeAudioData(decode(base64Audio), outCtx, 24000, 1);
-              const source = outCtx.createBufferSource();
-              source.buffer = audioBuffer;
-              source.connect(outCtx.destination);
-              // Ensure sources are cleared from memory once finished
-              source.addEventListener('ended', () => {
-                sourcesRef.current.delete(source);
-              });
-              source.start(nextStartTimeRef.current);
-              nextStartTimeRef.current += audioBuffer.duration;
-              sourcesRef.current.add(source);
-            }
-          },
-          onerror: (err: any) => { 
-            const msg = err?.message || "";
-            // Handle project/API key verification issues by triggering re-selection
-            if (msg.includes("Requested entity was not found.")) {
-              onQuotaError?.();
-              return;
-            }
-            if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
-              setIsQuotaExceeded(true);
-              setError("AI Busy: Bahut log use kar rahe hain.");
-            } else {
-              setError("Connection Error"); 
-            }
-            stopSession(); 
-          },
-          onclose: () => stopSession()
-        },
-        config: {
-          responseModalities: [Modality.AUDIO],
-          systemInstruction: systemInstruction,
-          // Gemini Live API tools: using function declarations for business logic
-          tools: [
-            { functionDeclarations: [recordSaleTool, restockTool] }
-          ],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } } },
-          inputAudioTranscription: {},
-          outputAudioTranscription: {},
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
-      });
-      sessionPromiseRef.current = sessionPromise;
+      };
+
+      mediaRecorder.onstop = async () => {
+        await processAudioAndRespond();
+      };
+
+      mediaRecorder.start();
+      setIsActive(true);
+      setIsConnecting(false);
     } catch (err: any) {
       setIsConnecting(false);
-      const msg = err?.message || "";
-      if (msg.includes("Requested entity was not found.")) {
-        onQuotaError?.();
-        return;
+      setError("Mic Permission chahiye.");
+      console.error("Microphone access error:", err);
+    }
+  };
+
+  const processAudioAndRespond = async () => {
+    if (audioChunksRef.current.length === 0) return;
+    
+    setIsAiThinking(true);
+    setError(null);
+
+    try {
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      // Create a file from blob
+      const audioFile = new File([audioBlob], 'speech.webm', { type: 'audio/webm' });
+
+      const apiKey = getApiKey();
+      
+      // Step 1: Speech-to-Text via Groq Whisper API
+      const formData = new FormData();
+      formData.append('file', audioFile);
+      formData.append('model', 'whisper-large-v3-turbo');
+      formData.append('language', 'hi'); // Hinglish prompts work best with 'hi' fallback or autodetect
+      formData.append('prompt', 'V-Mitra general store business billing. attaa, doodh, chini, tel, chawal, sabun.');
+
+      const transResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: formData
+      });
+
+      if (!transResponse.ok) {
+        const errJson = await transResponse.json().catch(() => ({}));
+        throw new Error(errJson?.error?.message || `Whisper API error (${transResponse.status})`);
       }
-      if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
-        setIsQuotaExceeded(true);
-        setError("AI Busy. Apni Key lagayein.");
+
+      const transData = await transResponse.json();
+      const userText = transData.text?.trim();
+
+      if (!userText) {
+        setIsAiThinking(false);
+        return; // nothing was said
+      }
+
+      // Add user transcript to UI
+      setTranscriptions(prev => [...prev, { id: Date.now().toString(), type: 'user', text: userText, timestamp: new Date() }]);
+
+      // Step 2: Chat Completion with Tool Calling via Groq Llama-3.3-70b-versatile
+      const systemInstruction = `${getSystemInstruction(Language.HINGLISH)}\nLocation: ${currentLocation || 'Unknown'}. Use Hindi/Hinglish always.`;
+      
+      // Format context messages
+      const apiMessages: any[] = [
+        { role: 'system', content: systemInstruction },
+        ...transcriptionsRef.current.map(t => ({
+          role: t.type === 'user' ? 'user' : 'assistant',
+          content: t.text
+        })),
+        { role: 'user', content: userText }
+      ];
+
+      const chatResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: apiMessages,
+          tools: tools,
+          tool_choice: 'auto',
+          temperature: 0.6
+        })
+      });
+
+      if (!chatResponse.ok) {
+        const errJson = await chatResponse.json().catch(() => ({}));
+        throw new Error(errJson?.error?.message || `Chat Completions error (${chatResponse.status})`);
+      }
+
+      const chatData = await chatResponse.json();
+      const choiceMessage = chatData?.choices?.[0]?.message;
+
+      if (!choiceMessage) {
+        throw new Error("No response message from Groq Llama model");
+      }
+
+      // Check for tool calling
+      if (choiceMessage.tool_calls && choiceMessage.tool_calls.length > 0) {
+        // Append assistant message containing tool calls
+        apiMessages.push(choiceMessage);
+
+        for (const tc of choiceMessage.tool_calls) {
+          const fnName = tc.function.name;
+          const fnArgs = JSON.parse(tc.function.arguments);
+          let toolResultText = "";
+
+          if (fnName === 'record_sale') {
+            const result = await onRecordSale(fnArgs.items);
+            if (result.success) {
+              setSuccessMsg(`Bill Save: ₹${result.amount ?? 0}`);
+              setTimeout(() => setSuccessMsg(null), 3500);
+              toolResultText = `Successfully recorded sale. Total: ₹${result.amount}`;
+            } else {
+              toolResultText = `Failed to record sale: ${result.message || 'Product not matched or out of stock'}`;
+            }
+          } else if (fnName === 'update_inventory_stock') {
+            const result = await onRestock(fnArgs.items);
+            if (result.success) {
+              setSuccessMsg("Stock update ho gaya!");
+              setTimeout(() => setSuccessMsg(null), 3500);
+              toolResultText = "Successfully restocked inventory items.";
+            } else {
+              toolResultText = `Failed to update inventory stock: ${result.message}`;
+            }
+          }
+
+          apiMessages.push({
+            role: 'tool',
+            tool_call_id: tc.id,
+            name: fnName,
+            content: JSON.stringify({ result: toolResultText })
+          });
+        }
+
+        // Send tool results back to Groq to generate a human response
+        const finalChatResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: apiMessages
+          })
+        });
+
+        if (!finalChatResponse.ok) {
+          const errJson = await finalChatResponse.json().catch(() => ({}));
+          throw new Error(errJson?.error?.message || `Final Chat completions error (${finalChatResponse.status})`);
+        }
+
+        const finalChatData = await finalChatResponse.json();
+        const finalMessage = finalChatData?.choices?.[0]?.message?.content || "Hisaab update ho gaya hai.";
+        
+        setTranscriptions(prev => [...prev, { id: (Date.now() + 1).toString(), type: 'ai', text: finalMessage, timestamp: new Date() }]);
+        speakText(finalMessage);
       } else {
-        setError("Mic Permission chahiye.");
+        // Standard chat response without tool calls
+        const finalMessage = choiceMessage.content || "Kripya fir se bolein.";
+        setTranscriptions(prev => [...prev, { id: (Date.now() + 1).toString(), type: 'ai', text: finalMessage, timestamp: new Date() }]);
+        speakText(finalMessage);
       }
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.message || "";
+      if (msg.includes("401") || msg.includes("Unauthorized") || msg.includes("invalid_api_key")) {
+        onQuotaError?.();
+      } else if (msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("rate limit")) {
+        setIsQuotaExceeded(true);
+        setError("AI Busy. Apni Key check karein.");
+      } else {
+        setError("AI error: Koshish karein dobara.");
+      }
+    } finally {
+      setIsAiThinking(false);
     }
   };
 
@@ -271,7 +350,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
         <div className="flex items-center gap-5">
           <div className="w-14 h-14 gradient-bg rounded-2xl flex items-center justify-center text-white"><Volume2 size={28} /></div>
           <div>
-            <h2 className="text-white font-black text-2xl tracking-tighter">V-Mitra Voice OS</h2>
+            <h2 className="text-white font-black text-2xl tracking-tighter">V-Mitra Voice OS (Groq)</h2>
             <div className="flex items-center gap-3">
               <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
               <p className="text-slate-500 text-[11px] font-black uppercase tracking-[0.3em]">{isActive ? 'AI Sun Raha Hai' : 'Standby'}</p>
@@ -352,7 +431,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
           {isConnecting ? <Loader2 className="animate-spin" size={40} /> : isActive ? <MicOff size={44} /> : <Mic size={44} />}
         </button>
         <div className="text-center">
-          <p className="text-white font-black uppercase tracking-[0.4em] text-xs mb-2">{isActive ? 'VOICE ENTRY CHALU HAI' : 'Baatchit Shuru Karein'}</p>
+          <p className="text-white font-black uppercase tracking-[0.4em] text-xs mb-2">{isActive ? 'VOICE ENTRY CHALU (TAP TO PROCESS)' : 'Baatchit Shuru Karein'}</p>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest">V-Mitra Bharat ki Awaz</p>
         </div>
       </div>
