@@ -9,11 +9,12 @@ Whether it's recording a sale ("Ek kilo cheeni bechi"), checking stock ("Doodh k
 
 ## 🚀 Key Features
 
-- **🗣️ Voice-First Interface:** Interact with your business data using natural voice commands powered by Google Gemini AI.
+- **🗣️ Voice-First Interface:** Interact with your business data using natural voice commands, powered by **Groq Whisper** transcription and **Groq Llama 3** reasoning, with browser-native text-to-speech output in natural Hinglish.
 - **📦 Smart Inventory Management:** Real-time tracking of stock levels with automatic alerts for low inventory.
-- **💰 Sales & Transaction Recording:** Seamlessly record sales and expenses without manual data entry.
+- **💰 Sales & Transaction Recording:** Seamlessly record sales and expenses through voice commands or manual entry.
 - **📊 Business Insights:** Instant access to daily revenue, profit margins, and sales trends via an intuitive dashboard.
-- **🇮🇳 Localized for India:** Built to understand the unique linguistic blend of Indian merchants.
+- **🇮🇳 Localized for India:** Built to understand the unique linguistic blend (Hinglish) used by Indian shopkeepers.
+- **🔑 Pro Key Selection:** Fully offline-capable API key configuration interface in the UI to manage and swap Groq Pro keys.
 
 ---
 
@@ -24,32 +25,51 @@ Whether it's recording a sale ("Ek kilo cheeni bechi"), checking stock ("Doodh k
 - **Build Tool:** [Vite](https://vitejs.dev/)
 - **Language:** [TypeScript](https://www.typescriptlang.org/)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **State Management:** React Hooks
-- **AI Integration:** Google Gemini API (`@google/genai`)
+- **AI Integration:** [Groq Cloud API](https://groq.com/) (Llama-3.3-70b-versatile for Chat & Tools, Whisper-large-v3-turbo for Speech-to-Text)
+- **Text-to-Speech:** Browser Web Speech API (`SpeechSynthesis`)
 - **Visualizations:** [Recharts](https://recharts.org/) & [Lucide React](https://lucide.dev/) (Icons)
 
 ### **Backend (Business Logic)**
 - **Framework:** [Spring Boot 3.2.2](https://spring.io/projects/spring-boot)
 - **Language:** [Java 17](https://www.java.com/)
 - **Build Tool:** [Maven](https://maven.apache.org/)
-- **Database:** H2 Database (In-Memory/File-Based for development)
-- **Architecture:** RESTful API with Controller-Service-Repository pattern
 
 ---
 
-## 📂 Project Structure
+## 🚀 Getting Started
 
-The project follows a standard structure combining a modern frontend with a robust enterprise-grade backend.
+### Prerequisites
+- Node.js (v18+)
+- NPM
+- A Groq API Key
 
+### Installation
 
+1. Clone the repository and navigate to the project directory.
+2. Install frontend dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env` file in the root directory and add your Groq API Key:
+   ```env
+   GROQ_API_KEY=your_groq_api_key_here
+   ```
+4. Start the frontend development server:
+   ```bash
+   npm run dev
+   ```
+   The app will run on `http://localhost:3000`.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-`npm run dev`
+---
 
-4.bash
-mvn clean package -DskipTests
-bash
-java -jar target/backend-0.0.1-SNAPSHOT.jar
+## 📂 Java Backend Setup (Optional)
+
+If running the Spring Boot backend service:
+1. Build the package:
+   ```bash
+   mvn clean package -DskipTests
+   ```
+2. Run the application:
+   ```bash
+   java -jar target/backend-0.0.1-SNAPSHOT.jar
+   ```
