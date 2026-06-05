@@ -23,7 +23,7 @@ Whether it's recording a sale ("Ek kilo cheeni bechi"), checking stock ("Doodh k
 ### **Frontend (User Interface)**
 - **Framework:** [React 19](https://react.dev/)
 - **Build Tool:** [Vite](https://vitejs.dev/)
-- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **Language:** [JavaScript (ES6+) / JSX](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/)
 - **AI Integration:** [Groq Cloud API](https://groq.com/) (Llama-3.3-70b-versatile for Chat & Tools, Whisper-large-v3-turbo for Speech-to-Text)
 - **Text-to-Speech:** Browser Web Speech API (`SpeechSynthesis`)
