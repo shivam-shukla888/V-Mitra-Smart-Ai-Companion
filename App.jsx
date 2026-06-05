@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Store, Mic, ShieldCheck, Briefcase, History, Receipt, Zap, CheckCircle2, MapPin, LayoutDashboard, FileText, LogOut, Key, Sparkles, Mail, Server, ShieldAlert, RefreshCw, Award, User, ShoppingCart, TrendingUp, Package, AlertCircle, Clock, Plus, Calculator, BarChart as BarChartIcon, AlertTriangle, Shield, X
@@ -15,12 +14,12 @@ import ManualSaleModal from './components/ManualSaleModal';
 /**
  * V-Mitra - Market Ready AI Business OS
  */
-const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<{ email: string, name: string } | null>(null);
+const App = () => {
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('insights');
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [isManualSaleOpen, setIsManualSaleOpen] = useState(false);
-  const [toast, setToast] = useState<{message: string, type: 'success' | 'info' | 'error'} | null>(null);
+  const [toast, setToast] = useState(null);
 
   const { 
     sales, inventory, history, recordSale, restockItem, deleteSale, 
@@ -34,12 +33,12 @@ const App: React.FC = () => {
     if (savedUser) setCurrentUser(JSON.parse(savedUser));
   }, []);
 
-  const showToast = useCallback((message: string, type: 'success' | 'info' | 'error' = 'info') => {
+  const showToast = useCallback((message, type = 'info') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const handleLogin = (userData: { email: string, name: string }) => {
+  const handleLogin = (userData) => {
     setCurrentUser(userData);
     localStorage.setItem('vmitra_user', JSON.stringify(userData));
     showToast(`Namaste, ${userData.name}!`, 'success');
@@ -59,7 +58,7 @@ const App: React.FC = () => {
     setGroqKeyInput(savedKey);
   }, [isKeyModalOpen]);
 
-  const handleSaveKey = (e: React.FormEvent) => {
+  const handleSaveKey = (e) => {
     e.preventDefault();
     if (groqKeyInput.trim()) {
       localStorage.setItem('groq_api_key', groqKeyInput.trim());
@@ -177,13 +176,13 @@ const App: React.FC = () => {
   );
 };
 
-const SidebarLink = ({ icon, label, active, onClick, highlight }: any) => (
+const SidebarLink = ({ icon, label, active, onClick, highlight }) => (
   <button onClick={onClick} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm transition-all ${active ? 'bg-indigo-600 text-white shadow-xl' : highlight ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}>
     {icon}<span>{label}</span>
   </button>
 );
 
-const FounderArea = ({ onSelectKey }: any) => (
+const FounderArea = ({ onSelectKey }) => (
   <div className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-20">
     <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white mb-8 shadow-2xl"><Shield size={40} /></div>
     <h2 className="text-6xl font-black text-white tracking-tighter mb-6 leading-none">Built for Scale</h2>

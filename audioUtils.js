@@ -1,5 +1,4 @@
-
-export function encode(bytes: Uint8Array): string {
+export function encode(bytes) {
   let binary = '';
   const len = bytes.byteLength;
   for (let i = 0; i < len; i++) {
@@ -8,7 +7,7 @@ export function encode(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-export function decode(base64: string): Uint8Array {
+export function decode(base64) {
   const binaryString = atob(base64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
@@ -18,12 +17,7 @@ export function decode(base64: string): Uint8Array {
   return bytes;
 }
 
-export async function decodeAudioData(
-  data: Uint8Array,
-  ctx: AudioContext,
-  sampleRate: number,
-  numChannels: number,
-): Promise<AudioBuffer> {
+export async function decodeAudioData(data, ctx, sampleRate, numChannels) {
   const dataInt16 = new Int16Array(data.buffer);
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
@@ -37,7 +31,7 @@ export async function decodeAudioData(
   return buffer;
 }
 
-export function createBlob(data: Float32Array): { data: string; mimeType: string } {
+export function createBlob(data) {
   const l = data.length;
   const int16 = new Int16Array(l);
   for (let i = 0; i < l; i++) {

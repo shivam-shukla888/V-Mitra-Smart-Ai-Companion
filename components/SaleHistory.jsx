@@ -1,15 +1,8 @@
-
 import React, { useState } from 'react';
 import { Receipt, Calendar, CreditCard, ChevronDown, ChevronUp, Search, Download, Trash2, Filter, Info, ShieldCheck } from 'lucide-react';
-import { Sale } from '../types';
 
-interface SaleHistoryProps {
-  sales: Sale[];
-  onDeleteSale?: (id: string) => void;
-}
-
-const SaleHistory: React.FC<SaleHistoryProps> = ({ sales, onDeleteSale }) => {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+const SaleHistory = ({ sales, onDeleteSale }) => {
+  const [expandedId, setExpandedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredSales = sales.filter(s => 
@@ -17,7 +10,7 @@ const SaleHistory: React.FC<SaleHistoryProps> = ({ sales, onDeleteSale }) => {
     s.items.some(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const toggleExpand = (id: string) => {
+  const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
   };
 

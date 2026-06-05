@@ -1,27 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Package, AlertCircle, Clock, RefreshCcw, Sparkles, ShoppingCart, History, CheckCircle2, Plus, Calculator, Mic, BarChart as BarChartIcon, AlertTriangle, Key, RefreshCw } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { DASHBOARD_SUMMARY_PROMPT } from '../constants';
-import { Sale, InventoryItem } from '../types';
 
-interface BusinessInsightsProps {
-  stats: {
-    todaySales: number;
-    todayProfit: number;
-    lowStockItems: string[];
-    transactionCount: number;
-    recentActivity: any[];
-  };
-  sales: Sale[];
-  inventory: InventoryItem[];
-  onQuickSale: (items: { name: string, quantity: number }[]) => void;
-  onOpenManualSale: () => void;
-  onQuotaError?: () => void;
-}
-
-const BusinessInsights: React.FC<BusinessInsightsProps> = ({ stats, sales, inventory, onQuickSale, onOpenManualSale, onQuotaError }) => {
-  const [aiSummary, setAiSummary] = useState<string>('Bahi-khata analyze ho raha hai...');
+const BusinessInsights = ({ stats, sales, inventory, onQuickSale, onOpenManualSale, onQuotaError }) => {
+  const [aiSummary, setAiSummary] = useState('Bahi-khata analyze ho raha hai...');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
   const retryCountRef = useRef(0);
@@ -65,7 +48,7 @@ const BusinessInsights: React.FC<BusinessInsightsProps> = ({ stats, sales, inven
       const text = data?.choices?.[0]?.message?.content;
       setAiSummary(text || `Nafa ₹${stats.todayProfit} hai. Hisaab clear hai!`);
       retryCountRef.current = 0;
-    } catch (e: any) {
+    } catch (e) {
       const errorMsg = e.message || "";
       if (errorMsg.includes("401") || errorMsg.includes("Unauthorized") || errorMsg.includes("invalid_api_key")) {
         onQuotaError?.();
@@ -290,15 +273,15 @@ const BusinessInsights: React.FC<BusinessInsightsProps> = ({ stats, sales, inven
   );
 };
 
-const VoiceCommandCard = ({ command, label }: { command: string, label: string }) => (
+const VoiceCommandCard = ({ command, label }) => (
   <div className="bg-white/5 border border-white/10 p-6 rounded-[32px] hover:bg-indigo-500/10 hover:border-indigo-500/40 transition-all group backdrop-blur-xl">
     <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-2">{label}</p>
     <p className="text-white font-bold text-base leading-tight italic group-hover:text-indigo-300 transition-colors">"{command}"</p>
   </div>
 );
 
-const StatCard = ({ label, value, trend, color, icon, onClick }: any) => {
-  const themes: any = {
+const StatCard = ({ label, value, trend, color, icon, onClick }) => {
+  const themes = {
     indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-indigo-500/5',
     emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/5',
     amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/5',

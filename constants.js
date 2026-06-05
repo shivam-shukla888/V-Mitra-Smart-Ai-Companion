@@ -1,7 +1,4 @@
-
-import { BusinessData, InventoryItem, ChatSession, Sale, Language } from './types';
-
-export const MOCK_INVENTORY: InventoryItem[] = [
+export const MOCK_INVENTORY = [
   { 
     id: '1', 
     name: 'Atta (5kg)', 
@@ -29,7 +26,7 @@ export const MOCK_INVENTORY: InventoryItem[] = [
   { id: '7', name: 'Soap Bars', category: 'Cleaning', stock: 60, unit: 'pcs', price: 35, costPrice: 28 },
 ];
 
-export const MOCK_SALES: Sale[] = [
+export const MOCK_SALES = [
   {
     id: 'T1001',
     date: new Date(),
@@ -40,7 +37,7 @@ export const MOCK_SALES: Sale[] = [
   }
 ];
 
-export const MOCK_BUSINESS_DATA: BusinessData = {
+export const MOCK_BUSINESS_DATA = {
   name: "Shukla General Store",
   owner: "Shivam Shukla",
   location: "India",
@@ -52,9 +49,9 @@ export const MOCK_BUSINESS_DATA: BusinessData = {
   }
 };
 
-export const MOCK_HISTORY: ChatSession[] = [];
+export const MOCK_HISTORY = [];
 
-export const getSystemInstruction = (selectedLanguage: Language) => {
+export const getSystemInstruction = (selectedLanguage) => {
   return `
 You are V-Mitra, the elite "AI Business OS" built for India's high-performance merchants.
 Your primary objective is to manage the shop's 'Bahi-Khata' with 100% precision.

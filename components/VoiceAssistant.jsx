@@ -1,17 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Volume2, X, Loader2, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { getSystemInstruction } from '../constants';
-import { TranscriptionItem, Language, ChatSession } from '../types';
-
-interface VoiceAssistantProps {
-  onClose: () => void;
-  currentLocation?: string;
-  locationCoords?: { lat: number, lng: number } | null;
-  onRecordSale: (items: { name: string, quantity: number }[]) => Promise<{ success: boolean, amount?: number, message?: string }>;
-  onRestock: (items: { name: string, quantity: number }[]) => Promise<{ success: boolean, message: string }>;
-  onSaveSession: (session: ChatSession) => void;
-  onQuotaError?: () => void;
-}
 
 const tools = [
   {
@@ -64,18 +53,18 @@ const tools = [
   }
 ];
 
-const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocation, locationCoords, onRecordSale, onRestock, onSaveSession, onQuotaError }) => {
+const VoiceAssistant = ({ onClose, currentLocation, locationCoords, onRecordSale, onRestock, onSaveSession, onQuotaError }) => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
-  const [transcriptions, setTranscriptions] = useState<TranscriptionItem[]>([]);
+  const [transcriptions, setTranscriptions] = useState([]);
   const [isAiThinking, setIsAiThinking] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState(null);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
   
   const onSaveSessionRef = useRef(onSaveSession);
   const transcriptionsRef = useRef(transcriptions);
@@ -101,12 +90,11 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
     return localStorage.getItem('groq_api_key') || process.env.GROQ_API_KEY || '';
   };
 
-  const speakText = (text: string) => {
+  const speakText = (text) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       const voices = window.speechSynthesis.getVoices();
-      // Try to find an Indian English or Hindi voice for more natural Hinglish accent
       const hiVoice = voices.find(v => v.lang.startsWith('hi') || v.lang.includes('IN') || v.lang.includes('in'));
       if (hiVoice) {
         utterance.voice = hiVoice;
@@ -164,7 +152,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
       mediaRecorder.start();
       setIsActive(true);
       setIsConnecting(false);
-    } catch (err: any) {
+    } catch (err) {
       setIsConnecting(false);
       setError("Mic Permission chahiye.");
       console.error("Microphone access error:", err);
@@ -179,16 +167,14 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
 
     try {
       const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-      // Create a file from blob
       const audioFile = new File([audioBlob], 'speech.webm', { type: 'audio/webm' });
 
       const apiKey = getApiKey();
       
-      // Step 1: Speech-to-Text via Groq Whisper API
       const formData = new FormData();
       formData.append('file', audioFile);
       formData.append('model', 'whisper-large-v3-turbo');
-      formData.append('language', 'hi'); // Hinglish prompts work best with 'hi' fallback or autodetect
+      formData.append('language', 'hi');
       formData.append('prompt', 'V-Mitra general store business billing. attaa, doodh, chini, tel, chawal, sabun.');
 
       const transResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
@@ -209,17 +195,14 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
 
       if (!userText) {
         setIsAiThinking(false);
-        return; // nothing was said
+        return;
       }
 
-      // Add user transcript to UI
       setTranscriptions(prev => [...prev, { id: Date.now().toString(), type: 'user', text: userText, timestamp: new Date() }]);
 
-      // Step 2: Chat Completion with Tool Calling via Groq Llama-3.3-70b-versatile
-      const systemInstruction = `${getSystemInstruction(Language.HINGLISH)}\nLocation: ${currentLocation || 'Unknown'}. Use Hindi/Hinglish always.`;
+      const systemInstruction = `${getSystemInstruction('Hinglish')}\nLocation: ${currentLocation || 'Unknown'}. Use Hindi/Hinglish always.`;
       
-      // Format context messages
-      const apiMessages: any[] = [
+      const apiMessages = [
         { role: 'system', content: systemInstruction },
         ...transcriptionsRef.current.map(t => ({
           role: t.type === 'user' ? 'user' : 'assistant',
@@ -255,9 +238,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
         throw new Error("No response message from Groq Llama model");
       }
 
-      // Check for tool calling
       if (choiceMessage.tool_calls && choiceMessage.tool_calls.length > 0) {
-        // Append assistant message containing tool calls
         apiMessages.push(choiceMessage);
 
         for (const tc of choiceMessage.tool_calls) {
@@ -293,7 +274,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
           });
         }
 
-        // Send tool results back to Groq to generate a human response
         const finalChatResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -317,12 +297,11 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
         setTranscriptions(prev => [...prev, { id: (Date.now() + 1).toString(), type: 'ai', text: finalMessage, timestamp: new Date() }]);
         speakText(finalMessage);
       } else {
-        // Standard chat response without tool calls
         const finalMessage = choiceMessage.content || "Kripya fir se bolein.";
         setTranscriptions(prev => [...prev, { id: (Date.now() + 1).toString(), type: 'ai', text: finalMessage, timestamp: new Date() }]);
         speakText(finalMessage);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       const msg = err?.message || "";
       if (msg.includes("401") || msg.includes("Unauthorized") || msg.includes("invalid_api_key")) {
@@ -337,12 +316,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose, currentLocatio
       setIsAiThinking(false);
     }
   };
-
-  useEffect(() => { 
-    return () => {
-      stopSession(); 
-    };
-  }, [stopSession]);
 
   return (
     <div className="fixed inset-0 z-[200] bg-slate-950/98 backdrop-blur-3xl flex flex-col animate-in fade-in duration-500 overflow-hidden">

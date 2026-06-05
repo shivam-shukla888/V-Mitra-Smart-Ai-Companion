@@ -1,16 +1,8 @@
-
 import React, { useState } from 'react';
 import { X, Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle2 } from 'lucide-react';
-import { InventoryItem } from '../types';
 
-interface ManualSaleModalProps {
-  inventory: InventoryItem[];
-  onClose: () => void;
-  onSubmit: (items: { name: string, quantity: number }[]) => void;
-}
-
-const ManualSaleModal: React.FC<ManualSaleModalProps> = ({ inventory, onClose, onSubmit }) => {
-  const [cart, setCart] = useState<{ id: string, name: string, quantity: number, price: number }[]>([]);
+const ManualSaleModal = ({ inventory, onClose, onSubmit }) => {
+  const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredInventory = inventory.filter(item => 
@@ -18,7 +10,7 @@ const ManualSaleModal: React.FC<ManualSaleModalProps> = ({ inventory, onClose, o
     item.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const addToCart = (item: InventoryItem) => {
+  const addToCart = (item) => {
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
@@ -28,7 +20,7 @@ const ManualSaleModal: React.FC<ManualSaleModalProps> = ({ inventory, onClose, o
     });
   };
 
-  const removeFromCart = (id: string) => {
+  const removeFromCart = (id) => {
     setCart(prev => {
       const existing = prev.find(i => i.id === id);
       if (existing && existing.quantity > 1) {
@@ -119,7 +111,7 @@ const ManualSaleModal: React.FC<ManualSaleModalProps> = ({ inventory, onClose, o
                     <div className="flex items-center gap-4 bg-white/5 rounded-2xl p-2 px-4 border border-white/5">
                       <button onClick={() => removeFromCart(item.id)} className="w-8 h-8 flex items-center justify-center text-white"><Minus size={18} /></button>
                       <span className="font-black text-lg text-white w-6 text-center">{item.quantity}</span>
-                      <button onClick={() => addToCart(inventory.find(i => i.id === item.id)!)} className="w-8 h-8 flex items-center justify-center text-white"><Plus size={18} /></button>
+                      <button onClick={() => addToCart(inventory.find(i => i.id === item.id))} className="w-8 h-8 flex items-center justify-center text-white"><Plus size={18} /></button>
                     </div>
                     <p className="font-black text-2xl text-indigo-400 tracking-tighter">₹{item.price * item.quantity}</p>
                   </div>

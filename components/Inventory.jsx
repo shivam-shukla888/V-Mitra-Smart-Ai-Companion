@@ -1,15 +1,9 @@
-
 import React, { useState } from 'react';
 import { Search, Plus, Filter, MoreVertical, AlertTriangle, History, X, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react';
-import { InventoryItem } from '../types';
 
-interface InventoryProps {
-  inventory: InventoryItem[];
-}
-
-const Inventory: React.FC<InventoryProps> = ({ inventory }) => {
+const Inventory = ({ inventory }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   const filtered = inventory.filter(item => 
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

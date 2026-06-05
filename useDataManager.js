@@ -1,6 +1,4 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { Sale, InventoryItem, SaleItem, ChatSession } from './types';
 import { MOCK_INVENTORY, MOCK_SALES, MOCK_HISTORY } from './constants';
 
 /**
@@ -8,30 +6,30 @@ import { MOCK_INVENTORY, MOCK_SALES, MOCK_HISTORY } from './constants';
  * Acts as the API client for the VmitraSpringBootApplication backend.
  */
 export const useDataManager = () => {
-  const [sales, setSales] = useState<Sale[]>(MOCK_SALES);
-  const [inventory, setInventory] = useState<InventoryItem[]>(MOCK_INVENTORY);
-  const [history, setHistory] = useState<ChatSession[]>(MOCK_HISTORY);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [sales, setSales] = useState(MOCK_SALES);
+  const [inventory, setInventory] = useState(MOCK_INVENTORY);
+  const [history, setHistory] = useState(MOCK_HISTORY);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Simulation of a Spring Boot API call
-  const recordSale = useCallback(async (itemsToSell: { name: string, quantity: number }[]) => {
+  const recordSale = useCallback(async (itemsToSell) => {
     // In a real environment, this would be: 
     // fetch('/api/v1/business/record-sale', { method: 'POST', body: JSON.stringify(itemsToSell) })
     
     // Simulating Java Logic processing
-    const mappings: Record<string, string> = { 
+    const mappings = { 
       'cheeni': 'sugar', 'doodh': 'milk', 'tel': 'oil', 
       'chawal': 'rice', 'sabun': 'soap', 'atta': 'atta'
     };
 
-    const isMatch = (q: string, i: string) => {
+    const isMatch = (q, i) => {
       const query = q.toLowerCase();
       const item = i.toLowerCase();
       return item.includes(query) || (mappings[query] && item.includes(mappings[query]));
     };
 
-    const saleItems: SaleItem[] = [];
+    const saleItems = [];
     let totalAmount = 0;
     let totalCost = 0;
     const newInventory = [...inventory];
@@ -54,7 +52,7 @@ export const useDataManager = () => {
 
     if (!matched) return { success: false, message: "Samaan nahi mila." };
 
-    const newSale: Sale = { 
+    const newSale = { 
       id: 'T' + Date.now(), 
       date: new Date(), 
       items: saleItems, 
@@ -70,7 +68,7 @@ export const useDataManager = () => {
     return { success: true, amount: totalAmount };
   }, [inventory]);
 
-  const restockItem = useCallback(async (items: { name: string, quantity: number }[]) => {
+  const restockItem = useCallback(async (items) => {
     const newInventory = [...inventory];
     items.forEach(its => {
       const idx = newInventory.findIndex(i => i.name.toLowerCase().includes(its.name.toLowerCase()));
@@ -88,5 +86,5 @@ export const useDataManager = () => {
     return { todaySales, todayProfit, lowStockItems, transactionCount: sales.length, recentActivity };
   }, [sales, inventory, recentActivity]);
 
-  return { sales, inventory, history, recordSale, restockItem, getStats, addChatSession: (s: any) => setHistory(p => [s, ...p]), deleteSale: (id: string) => setSales(p => p.filter(s => s.id !== id)), deleteChatSession: (id: string) => setHistory(p => p.filter(h => h.id !== id)), clearChatHistory: () => setHistory([]) };
+  return { sales, inventory, history, recordSale, restockItem, getStats, addChatSession: (s) => setHistory(p => [s, ...p]), deleteSale: (id) => setSales(p => p.filter(s => s.id !== id)), deleteChatSession: (id) => setHistory(p => p.filter(h => h.id !== id)), clearChatHistory: () => setHistory([]) };
 };

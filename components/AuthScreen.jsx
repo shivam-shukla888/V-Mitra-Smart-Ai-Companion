@@ -1,21 +1,16 @@
-
 import React, { useState } from 'react';
 import { Mail, Lock, User, ShieldCheck, ArrowRight, Loader2, KeyRound } from 'lucide-react';
 
-interface AuthScreenProps {
-  onLogin: (userData: { email: string, name: string }) => void;
-}
-
-const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
-  const [mode, setMode] = useState<'login' | 'register' | 'otp'>('login');
+const AuthScreen = ({ onLogin }) => {
+  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleAuth = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);

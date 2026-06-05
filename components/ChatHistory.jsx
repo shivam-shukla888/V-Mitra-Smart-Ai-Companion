@@ -1,18 +1,10 @@
-
 import React, { useState } from 'react';
 import { MessageSquare, Calendar, ChevronRight, Play, Trash2, X, Clock, User, Bot } from 'lucide-react';
-import { ChatSession } from '../types';
 
-interface ChatHistoryProps {
-  history: ChatSession[];
-  onDelete: (id: string) => void;
-  onClear: () => void;
-}
+const ChatHistory = ({ history, onDelete, onClear }) => {
+  const [activeSession, setActiveSession] = useState(null);
 
-const ChatHistory: React.FC<ChatHistoryProps> = ({ history, onDelete, onClear }) => {
-  const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
-
-  const handleDelete = (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e, id) => {
     e.stopPropagation();
     if (window.confirm("Kya aap ye voice log delete karna chahte hain?")) {
       onDelete(id);
