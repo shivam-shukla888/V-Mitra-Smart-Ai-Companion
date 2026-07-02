@@ -1,20 +1,20 @@
 # V-Mitra: Smart AI Business Companion
 
-## 📖 Introduction
+##  Introduction
 **V-Mitra** is a cutting-edge **AI-powered Business Operating System** designed specifically for Indian merchants. It bridges the gap between traditional bookkeeping and modern digital management by allowing users to manage their entire business using natural language voice commands in **Hinglish** (Hindi + English).
 
 Whether it's recording a sale ("Ek kilo cheeni bechi"), checking stock ("Doodh khatam ho gaya kya?"), or analyzing profits ("Aaj kitna munafa hua?"), V-Mitra acts as a smart companion that simplifies complex business operations.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-- **🗣️ Voice-First Interface:** Interact with your business data using natural voice commands, powered by **Groq Whisper** transcription and **Groq Llama 3** reasoning, with browser-native text-to-speech output in natural Hinglish.
-- **📦 Smart Inventory Management:** Real-time tracking of stock levels with automatic alerts for low inventory.
-- **💰 Sales & Transaction Recording:** Seamlessly record sales and expenses through voice commands or manual entry.
-- **📊 Business Insights:** Instant access to daily revenue, profit margins, and sales trends via an intuitive dashboard.
+- ** Voice-First Interface:** Interact with your business data using natural voice commands, powered by **Groq Whisper** transcription and **Groq Llama 3** reasoning, with browser-native text-to-speech output in natural Hinglish.
+- * Smart Inventory Management:** Real-time tracking of stock levels with automatic alerts for low inventory.
+- ** Sales & Transaction Recording:** Seamlessly record sales and expenses through voice commands or manual entry.
+- **Business Insights:** Instant access to daily revenue, profit margins, and sales trends via an intuitive dashboard.
 - **🇮🇳 Localized for India:** Built to understand the unique linguistic blend (Hinglish) used by Indian shopkeepers.
-- **🔑 Pro Key Selection:** Fully offline-capable API key configuration interface in the UI to manage and swap Groq Pro keys.
+- ** Pro Key Selection:** Fully offline-capable API key configuration interface in the UI to manage and swap Groq Pro keys.
 
 ---
 
@@ -36,7 +36,7 @@ Whether it's recording a sale ("Ek kilo cheeni bechi"), checking stock ("Doodh k
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js (v18+)
@@ -62,7 +62,7 @@ Whether it's recording a sale ("Ek kilo cheeni bechi"), checking stock ("Doodh k
 
 ---
 
-## 📂 Java Backend Setup (Optional)
+## Java Backend Setup (Optional)
 
 If running the Spring Boot backend service:
 1. Build the package:
